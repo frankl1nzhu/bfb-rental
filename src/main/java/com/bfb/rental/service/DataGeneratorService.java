@@ -10,7 +10,7 @@ import com.bfb.rental.repository.VehiculeRepository;
 import com.bfb.rental.repository.ContratRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -57,6 +57,9 @@ public class DataGeneratorService {
         v.setDateAcquisition(LocalDate.now().minusDays(random.nextInt(1000)));
         v.setEtat(EtatVehicule.DISPONIBLE);
         
+        // Donner un prix aléatoire 30 - 150 Euros
+        v.setPrixJournee(30.0 + random.nextInt(120));
+
         // Logique simple pour éviter les doublons d'immatriculation
         if(!vehiculeRepository.existsByImmatriculation(v.getImmatriculation())) {
             vehiculeRepository.save(v);
@@ -130,5 +133,14 @@ public class DataGeneratorService {
         
         c2.setEtat(EtatContrat.EN_ATTENTE);
         contratRepository.save(c2);
+    }
+
+
+
+    @Transactional
+    public void resetSystem() {
+        contratRepository.deleteAll();
+        vehiculeRepository.deleteAll();
+        clientRepository.deleteAll();
     }
 }

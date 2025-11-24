@@ -28,4 +28,6 @@ public class Vehicule {
 
     @Enumerated(EnumType.STRING)
     private EtatVehicule etat;
+
+    private Double prixJournee; 
 }

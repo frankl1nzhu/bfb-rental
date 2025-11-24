@@ -1,65 +1,149 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>Liste des contrats</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<head th:replace="~{fragments/layout :: head('Contrats')}"></head>
 <body>
-    <div class="container mt-5">
-        <a href="/" class="btn btn-secondary mb-3">← Retour à l'accueil</a>
-        
-        <div class="alert alert-danger" th:if="${param.error}">
-            Échec de l'opération : conflit d'horaire ou données insuffisantes.
-        </div>
+    <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>📝 Suivi des contrats</h2>
+    <div class="container">
+        <!-- Barre d'outils -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold"><i class="bi bi-file-text"></i> Suivi des Contrats</h2>
             <div>
-                <a href="/ui/contrats/scenario/retard" class="btn btn-danger me-2">🔥 Générer un scénario de conflit (démo)</a>
-                <a href="/ui/contrats/random" class="btn btn-warning me-2">🎲 Générer un contrat aléatoire</a>
-                <a href="/ui/contrats/new" class="btn btn-primary">+ Nouveau contrat</a>
+            <!-- Groupe de boutons de filtrage -->
+            <div class="btn-group me-3" role="group">
+            <button type="button" class="btn btn-outline-secondary active" onclick="filterTable('all')">Tous</button>
+            <button type="button" class="btn btn-outline-primary" onclick="filterTable('EN_COURS')">En cours</button>
+            <button type="button" class="btn btn-outline-info" onclick="filterTable('EN_ATTENTE')">En attente</button>
+            <button type="button" class="btn btn-outline-danger" onclick="filterTable('EN_RETARD')">En retard</button>
+            </div>
+
+            <!-- Bouton de génération aléatoire -->
+            <a href="/ui/contrats/random" class="btn btn-warning me-2" title="Générer un contrat aléatoire">
+                <i class="bi bi-dice-5-fill"></i> Aléatoire
+            </a>
+
+            <!-- Bouton de scénario de démonstration -->
+            <a href="/ui/contrats/scenario/retard" class="btn btn-danger me-2" title="Générer un scénario de conflit">
+                <i class="bi bi-lightning-charge-fill"></i> Démo Conflit
+            </a>
+
+            <!-- Bouton de création -->
+            <a href="/ui/contrats/new" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Nouveau
+            </a>
             </div>
         </div>
 
-        <table class="table table-bordered shadow-sm">
-            <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Client</th>
-                    <th>Véhicule</th>
-                    <th>Période</th>
-                    <th>État</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="c : ${contrats}">
-                    <td th:text="${c.id}"></td>
-                    <td th:text="${c.client.nom + ' ' + c.client.prenom}"></td>
-                    <td th:text="${c.vehicule.marque + ' (' + c.vehicule.immatriculation + ')'}"></td>
-                    <td th:text="${c.dateDebut + ' ➔ ' + c.dateFin}"></td>
-                    <td>
-                        <span th:text="${c.etat}" class="badge bg-secondary"></span>
-                    </td>
-                    <td>
-                        <a th:href="@{/ui/contrats/edit/{id}(id=${c.id})}" 
-                           class="btn btn-sm btn-outline-primary">✏️ Modifier</a>
-                        <a th:if="${c.etat.name() == 'EN_COURS' or c.etat.name() == 'EN_RETARD'}"
-                            th:href="@{/ui/contrats/terminer/{id}(id=${c.id})}"
-                            class="btn btn-sm btn-success"
-                            onclick="return confirm('Confirmer le retour du véhicule et terminer le contrat ?')">🏁 Terminer</a>
-
-                        <a th:if="${c.etat.name() == 'EN_COURS'}" 
-                           th:href="@{/ui/contrats/retard/{id}(id=${c.id})}" 
-                           class="btn btn-sm btn-warning">⏳ Retard</a>
-                           
-                        <a th:href="@{/ui/contrats/delete/{id}(id=${c.id})}" 
-                           class="btn btn-sm btn-danger" 
-                           onclick="return confirm('Confirmer la suppression ?')">🗑️ Supprimer</a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle" id="contratTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Client</th>
+                            <th>Véhicule</th>
+                            <th>Dates</th>
+                            <th>Montant</th>
+                            <th>État</th>
+                            <th style="min-width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${contrats}" th:data-status="${c.etat}">
+                            <td th:text="${'#' + c.id}" class="text-muted small"></td>
+                            
+                            <!-- Informations client -->
+                            <td>
+                                <div class="fw-bold" th:text="${c.client.nom + ' ' + c.client.prenom}"></div>
+                            </td>
+                            
+                            <!-- Informations véhicule -->
+                            <td>
+                                <div th:text="${c.vehicule.marque + ' ' + c.vehicule.modele}"></div>
+                                <div class="small text-muted" th:text="${c.vehicule.immatriculation}"></div>
+                            </td>
+                            
+                            <!-- Plage de dates -->
+                            <td>
+                                <div th:text="${c.dateDebut}"></div>
+                                <div class="small text-muted" th:text="'➔ ' + ${c.dateFin}"></div>
+                            </td>
+                            
+                            <!-- Affichage du montant -->
+                            <td class="text-success fw-bold" 
+                                th:text="${c.prixTotal != null ? #numbers.formatCurrency(c.prixTotal) : '-'}">
+                            </td>
+                            
+                            <!-- Étiquette d'état -->
+                            <td>
+                                <span th:text="${c.etat}"
+                                      th:class="${'badge rounded-pill ' + 
+                                      (c.etat.name() == 'EN_COURS' ? 'bg-primary' : 
+                                      (c.etat.name() == 'EN_ATTENTE' ? 'bg-info text-dark' : 
+                                      (c.etat.name() == 'EN_RETARD' ? 'bg-danger' : 
+                                      (c.etat.name() == 'TERMINE' ? 'bg-success' : 'bg-secondary'))))}">
+                                </span>
+                            </td>
+                            
+                            <!-- Groupe de boutons d'action unifié -->
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    
+                                    <!-- 1. Retourner le véhicule (coche verte) -->
+                                    <a th:if="${c.etat.name() == 'EN_COURS' or c.etat.name() == 'EN_RETARD'}"
+                                       th:href="@{/ui/contrats/terminer/{id}(id=${c.id})}"
+                                       class="btn btn-outline-success" 
+                                       title="Retourner le véhicule"
+                                       onclick="return confirm('Confirmer que le véhicule a été retourné ?')">
+                                        <i class="bi bi-check-lg"></i>
+                                    </a>
+                                    
+                                    <!-- 2. Marquer en retard (Sablier jaune) -->
+                                    <a th:if="${c.etat.name() == 'EN_COURS'}"
+                                       th:href="@{/ui/contrats/retard/{id}(id=${c.id})}"
+                                       class="btn btn-outline-warning" 
+                                       title="Marquer comme en retard">
+                                        <i class="bi bi-hourglass-split"></i>
+                                    </a>
+                                    
+                                    <!-- 3. Modifier (Crayon bleu) -->
+                                    <a th:href="@{/ui/contrats/edit/{id}(id=${c.id})}" 
+                                       class="btn btn-outline-primary" 
+                                       title="Modifier le contrat">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </a>
+                                    
+                                    <!-- 4. Supprimer (Corbeille rouge) -->
+                                    <a th:href="@{/ui/contrats/delete/{id}(id=${c.id})}" 
+                                       class="btn btn-outline-danger" 
+                                       title="Supprimer le contrat" 
+                                       onclick="return confirm('Confirmer la suppression ?')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function filterTable(status) {
+            const rows = document.querySelectorAll('#contratTable tbody tr');
+            document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            rows.forEach(row => {
+                if (status === 'all' || row.dataset.status === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    </script>
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
 </body>
 </html>

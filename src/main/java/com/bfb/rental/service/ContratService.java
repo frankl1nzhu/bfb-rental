@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -27,9 +28,16 @@ public class ContratService {
     private final VehiculeRepository vehiculeRepository;
     private final ClientRepository clientRepository;
 
-    /**
-     * Créer un contrat - Validation de la logique métier
-     */
+
+
+    private Double calculatePrice(Vehicule vehicule, LocalDate start, LocalDate end) {
+        if (vehicule.getPrixJournee() == null) return 0.0;
+        long days = ChronoUnit.DAYS.between(start, end);
+        if (days == 0) days = 1;
+        return days * vehicule.getPrixJournee();
+    }
+
+
     @Transactional
     public Contrat createContrat(Long clientId, Long vehiculeId, LocalDate debut, LocalDate fin) {
         // 1. Validation de base
@@ -59,7 +67,12 @@ public class ContratService {
         contrat.setVehicule(vehicule);
         contrat.setDateDebut(debut);
         contrat.setDateFin(fin);
-        contrat.setEtat(EtatContrat.EN_ATTENTE); // État initial
+        contrat.setEtat(EtatContrat.EN_ATTENTE);
+
+
+        // 5. Calcul du prix total
+        Double price = calculatePrice(vehicule, debut, fin);
+        contrat.setPrixTotal(price);
 
         return contratRepository.save(contrat);
     }
@@ -149,7 +162,9 @@ public class ContratService {
         contrat.setDateDebut(debut);
         contrat.setDateFin(fin);
         
-        // Note : On ne réinitialise pas l'état, on garde l'état actuel (ex: EN_COURS)
+        Double price = calculatePrice(vehicule, debut, fin);
+        contrat.setPrixTotal(price);
+
         contratRepository.save(contrat);
     }
 

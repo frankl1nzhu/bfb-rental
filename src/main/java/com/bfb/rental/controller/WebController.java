@@ -11,12 +11,11 @@ import com.bfb.rental.service.ContratService;
 import com.bfb.rental.service.DataGeneratorService;
 import com.bfb.rental.service.VehiculeService;
 import lombok.RequiredArgsConstructor;
-
-import java.time.LocalDate;
-
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @Controller
 @RequiredArgsConstructor
@@ -29,10 +28,46 @@ public class WebController {
     private final ContratService contratService;
     private final DataGeneratorService dataGeneratorService;
 
+    // === Page d'accueil (Tableau de bord) ===
+    // [Attention] C'est la seule méthode qui gère "/", l'ancienne index() doit être supprimée
     @GetMapping("/")
-    public String index() { return "index"; }
+    public String index(Model model) {
+        // 1. Comptage de base
+        long totalCars = vehiculeRepository.count();
+        long totalClients = clientRepository.count();
 
-    // ================= Gestion des Véhicules =================
+        // 2. Statistiques d'état
+        long rentedCars = vehiculeRepository.findAll().stream()
+                .filter(v -> v.getEtat() == EtatVehicule.EN_LOCATION).count();
+
+        // 3. Statistiques financières (calcul du revenu total des contrats terminés ou en cours, éviter les NullPointer)
+        double totalRevenue = contratRepository.findAll().stream()
+                .filter(c -> c.getPrixTotal() != null)
+                .mapToDouble(Contrat::getPrixTotal)
+                .sum();
+
+        // 4. Statistiques d'alerte
+        long overdueContracts = contratRepository.findAll().stream()
+                .filter(c -> c.getEtat() == com.bfb.rental.enums.EtatContrat.EN_RETARD)
+                .count();
+
+        model.addAttribute("totalCars", totalCars);
+        model.addAttribute("rentedCars", rentedCars);
+        model.addAttribute("totalClients", totalClients);
+        model.addAttribute("totalRevenue", String.format("%.2f", totalRevenue));
+        model.addAttribute("overdueContracts", overdueContracts);
+
+        return "index";
+    }
+
+    // Réinitialiser le système
+    @GetMapping("/ui/reset")
+    public String resetSystem() {
+        dataGeneratorService.resetSystem();
+        return "redirect:/?reset=success";
+    }
+
+    // ================= Gestion des véhicules =================
     @GetMapping("/ui/vehicules")
     public String vehicules(Model model) {
         model.addAttribute("vehicules", vehiculeRepository.findAll());
@@ -70,6 +105,7 @@ public class WebController {
 
     @PostMapping("/ui/vehicules")
     public String saveVehicule(@ModelAttribute Vehicule vehicule) {
+        // Si c'est nouveau et sans état, disponible par défaut
         if (vehicule.getId() == null && vehicule.getEtat() == null) {
             vehicule.setEtat(EtatVehicule.DISPONIBLE);
         }
@@ -77,7 +113,14 @@ public class WebController {
         return "redirect:/ui/vehicules";
     }
 
-    // ================= Gestion des Clients =================
+    // Signaler une panne (déclenché via l'interface Web)
+    @GetMapping("/ui/vehicules/panne/{id}")
+    public String declarerPanne(@PathVariable Long id) {
+        vehiculeService.declarerPanne(id);
+        return "redirect:/ui/vehicules";
+    }
+
+    // ================= Gestion des clients =================
     @GetMapping("/ui/clients")
     public String clients(Model model) {
         model.addAttribute("clients", clientRepository.findAll());
@@ -119,36 +162,48 @@ public class WebController {
         return "redirect:/ui/clients";
     }
 
-    // ================= Gestion des Contrats =================
+    // ================= Gestion des contrats =================
     @GetMapping("/ui/contrats")
     public String contrats(Model model) {
         model.addAttribute("contrats", contratRepository.findAll());
         return "contrats";
     }
 
-    // Afficher le formulaire d'ajout de contrat
     @GetMapping("/ui/contrats/new")
     public String showContratForm(Model model) {
-        model.addAttribute("contrat", new Contrat());
+        model.addAttribute("contrat", new Contrat()); // Objet vide
         model.addAttribute("clients", clientRepository.findAll());
         model.addAttribute("vehicules", vehiculeRepository.findAll());
         return "contrat-form";
     }
-    
+
+    @GetMapping("/ui/contrats/edit/{id}")
+    public String showEditContratForm(@PathVariable Long id, Model model) {
+        Contrat contrat = contratRepository.findById(id).orElseThrow();
+        model.addAttribute("contrat", contrat); // Objet à afficher
+        model.addAttribute("clients", clientRepository.findAll());
+        model.addAttribute("vehicules", vehiculeRepository.findAll());
+        return "contrat-form";
+    }
+
     @GetMapping("/ui/contrats/delete/{id}")
     public String deleteContrat(@PathVariable Long id) {
         contratRepository.deleteById(id);
         return "redirect:/ui/contrats";
     }
 
-    // Retarder le contrat (déclenche l'Observer)
     @GetMapping("/ui/contrats/retard/{id}")
     public String delayContrat(@PathVariable Long id) {
         contratService.declarerRetard(id);
         return "redirect:/ui/contrats";
     }
 
-    // Générer un contrat aléatoire
+    @GetMapping("/ui/contrats/terminer/{id}")
+    public String terminerContrat(@PathVariable Long id) {
+        contratService.terminerContrat(id);
+        return "redirect:/ui/contrats";
+    }
+
     @GetMapping("/ui/contrats/random")
     public String randomContrat() {
         try {
@@ -159,57 +214,34 @@ public class WebController {
         return "redirect:/ui/contrats";
     }
 
-
-
-    @GetMapping("/ui/contrats/edit/{id}")
-    public String showEditContratForm(@PathVariable Long id, Model model) {
-        Contrat contrat = contratRepository.findById(id).orElseThrow();
-        
-        model.addAttribute("contrat", contrat); // Passer le contrat actuel pour l'affichage
-        model.addAttribute("clients", clientRepository.findAll());
-        model.addAttribute("vehicules", vehiculeRepository.findAll());
-        
-        return "contrat-form"; // Réutiliser le même formulaire
-    }
-
-    // === Sauvegarder le contrat ===
-    @PostMapping("/ui/contrats")
-    public String saveContrat(
-            @RequestParam(required = false) Long id,
-            @RequestParam Long clientId, 
-            @RequestParam Long vehiculeId, 
-            @RequestParam String dateDebut, 
-            @RequestParam String dateFin) {
-        
-        try {
-            LocalDate start = java.time.LocalDate.parse(dateDebut);
-            LocalDate end = java.time.LocalDate.parse(dateFin);
-
-            if (id != null) {
-                // Si un ID est présent, c'est une mise à jour
-                contratService.updateContrat(id, clientId, vehiculeId, start, end);
-            } else {
-                // Si pas d'ID, c'est une création
-                contratService.createContrat(clientId, vehiculeId, start, end);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "redirect:/ui/contrats?error=" + "Conflit ou erreur";
-        }
-        return "redirect:/ui/contrats";
-    }
-
-    // Générer un scénario spécifique de "test de retard"
+    // Générer un scénario de démonstration
     @GetMapping("/ui/contrats/scenario/retard")
     public String generateRetardScenario() {
         dataGeneratorService.generateRetardScenario();
         return "redirect:/ui/contrats";
     }
 
-    // Restituer le véhicule (terminer le contrat)
-    @GetMapping("/ui/contrats/terminer/{id}")
-    public String terminerContrat(@PathVariable Long id) {
-        contratService.terminerContrat(id);
+    // Sauvegarder le contrat (Création + Mise à jour)
+    @PostMapping("/ui/contrats")
+    public String saveContrat(
+            @RequestParam(required = false) Long id,
+            @RequestParam Long clientId,
+            @RequestParam Long vehiculeId,
+            @RequestParam String dateDebut,
+            @RequestParam String dateFin) {
+        try {
+            LocalDate start = LocalDate.parse(dateDebut);
+            LocalDate end = LocalDate.parse(dateFin);
+
+            if (id != null) {
+                contratService.updateContrat(id, clientId, vehiculeId, start, end);
+            } else {
+                contratService.createContrat(clientId, vehiculeId, start, end);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "redirect:/ui/contrats?error=collision";
+        }
         return "redirect:/ui/contrats";
     }
 }

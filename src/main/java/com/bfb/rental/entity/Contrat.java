@@ -31,6 +31,5 @@ public class Contrat {
     @JoinColumn(name = "vehicule_id", nullable = false)
     private Vehicule vehicule;
     
-    // Champ prix réservé
     private Double prixTotal;
 }
