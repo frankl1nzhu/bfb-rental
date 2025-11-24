@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Ajouter un nouveau véhicule</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">🚙 Ajouter un nouveau véhicule</h4>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/ui/vehicules}" th:object="${vehicule}" method="post">
+                            <input type="hidden" th:field="*{id}" />
+                            <input type="hidden" th:field="*{etat}" />
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Marque</label>
+                                <input type="text" th:field="*{marque}" class="form-control" placeholder="ex: Peugeot" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Modèle</label>
+                                <input type="text" th:field="*{modele}" class="form-control" placeholder="ex: 208" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Motorisation</label>
+                                <select th:field="*{motorisation}" class="form-select">
+                                    <option value="Essence">Essence</option>
+                                    <option value="Diesel">Diesel</option>
+                                    <option value="Electrique">Electrique</option>
+                                    <option value="Hybride">Hybride</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Couleur</label>
+                                <input type="text" th:field="*{couleur}" class="form-control">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Immatriculation</label>
+                                <input type="text" th:field="*{immatriculation}" class="form-control" placeholder="ex: AB-123-CD" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Date d'acquisition</label>
+                                <input type="date" th:field="*{dateAcquisition}" class="form-control" required>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-success">Enregistrer le véhicule</button>
+                                <a href="/ui/vehicules" class="btn btn-secondary">Annuler</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

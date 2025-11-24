@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Liste des contrats</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <a href="/" class="btn btn-secondary mb-3">← Retour à l'accueil</a>
+        
+        <div class="alert alert-danger" th:if="${param.error}">
+            Échec de l'opération : conflit d'horaire ou données insuffisantes.
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>📝 Suivi des contrats</h2>
+            <div>
+                <a href="/ui/contrats/scenario/retard" class="btn btn-danger me-2">🔥 Générer un scénario de conflit (démo)</a>
+                <a href="/ui/contrats/random" class="btn btn-warning me-2">🎲 Générer un contrat aléatoire</a>
+                <a href="/ui/contrats/new" class="btn btn-primary">+ Nouveau contrat</a>
+            </div>
+        </div>
+
+        <table class="table table-bordered shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Client</th>
+                    <th>Véhicule</th>
+                    <th>Période</th>
+                    <th>État</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="c : ${contrats}">
+                    <td th:text="${c.id}"></td>
+                    <td th:text="${c.client.nom + ' ' + c.client.prenom}"></td>
+                    <td th:text="${c.vehicule.marque + ' (' + c.vehicule.immatriculation + ')'}"></td>
+                    <td th:text="${c.dateDebut + ' ➔ ' + c.dateFin}"></td>
+                    <td>
+                        <span th:text="${c.etat}" class="badge bg-secondary"></span>
+                    </td>
+                    <td>
+                        <a th:href="@{/ui/contrats/edit/{id}(id=${c.id})}" 
+                           class="btn btn-sm btn-outline-primary">✏️ Modifier</a>
+                        <a th:if="${c.etat.name() == 'EN_COURS' or c.etat.name() == 'EN_RETARD'}"
+                            th:href="@{/ui/contrats/terminer/{id}(id=${c.id})}"
+                            class="btn btn-sm btn-success"
+                            onclick="return confirm('Confirmer le retour du véhicule et terminer le contrat ?')">🏁 Terminer</a>
+
+                        <a th:if="${c.etat.name() == 'EN_COURS'}" 
+                           th:href="@{/ui/contrats/retard/{id}(id=${c.id})}" 
+                           class="btn btn-sm btn-warning">⏳ Retard</a>
+                           
+                        <a th:href="@{/ui/contrats/delete/{id}(id=${c.id})}" 
+                           class="btn btn-sm btn-danger" 
+                           onclick="return confirm('Confirmer la suppression ?')">🗑️ Supprimer</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

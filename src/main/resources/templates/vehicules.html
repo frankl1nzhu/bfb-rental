@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Liste des véhicules</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <a href="/" class="btn btn-secondary mb-3">← Retour à l'accueil</a>
+        <h2>🚙 Gestion du parc de véhicules</h2>
+        <div>
+            <a href="/ui/vehicules/random" class="btn btn-warning me-2">🎲 Générer véhicule aléatoire</a>
+            <a href="/ui/vehicules/new" class="btn btn-success">+ Ajouter un véhicule</a>
+        </div>
+
+        <table class="table table-striped table-hover mt-3 shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Marque/Modèle</th>
+                    <th>Immatriculation</th>
+                    <th>État</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Boucle Thymeleaf pour le rendu -->
+                <tr th:each="v : ${vehicules}">
+                    <td th:text="${v.id}">1</td>
+                    <td th:text="${v.marque + ' ' + v.modele}">Peugeot 208</td>
+                    <td th:text="${v.immatriculation}">AB-123-CD</td>
+                    <td>
+                        <!-- Affichage d'un badge coloré selon l'état -->
+                        <span th:text="${v.etat != null ? v.etat : 'Inconnu'}" 
+                            th:class="${v.etat != null && v.etat.name() == 'DISPONIBLE' ? 'badge bg-success' : 
+                                    (v.etat != null && v.etat.name() == 'EN_PANNE' ? 'badge bg-danger' : 'badge bg-secondary')}">
+                        </span>
+                    </td>
+                    <td>
+                        <a th:href="@{/ui/vehicules/edit/{id}(id=${v.id})}" class="btn btn-sm btn-outline-primary">✏️</a>
+                        <a th:href="@{/ui/vehicules/delete/{id}(id=${v.id})}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Confirmer la suppression ?')">🗑️</a>
+                        
+                        <!-- Bouton "Déclarer panne" uniquement pour les véhicules non en panne -->
+                        <button th:if="${v.etat != null && v.etat.name() != 'EN_PANNE'}"
+                                th:onclick="'declarerPanne(' + ${v.id} + ')'" 
+                                class="btn btn-sm btn-outline-danger">
+                            ⚠️ Déclarer une panne
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function declarerPanne(id) {
+            if(confirm('Êtes-vous sûr de vouloir déclarer ce véhicule en panne ? Cela annulera automatiquement les contrats en attente associés.')) {
+                fetch('/api/vehicules/' + id + '/panne', { method: 'POST' })
+                    .then(response => {
+                        if(response.ok) {
+                            alert('Panne déclarée avec succès !');
+                            location.reload();
+                        } else {
+                            alert('Échec de la déclaration');
+                        }
+                    });
+            }
+        }
+    </script>
+</body>
+</html>
