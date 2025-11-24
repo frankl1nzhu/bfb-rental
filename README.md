@@ -65,3 +65,7 @@ A robust Car Rental Management System built withSpring Boot, designed to handle 
 3. Identify the contract marked `EN_COURS` (ended yesterday) and the one `EN_ATTENTE` (starts tomorrow).
 4. Click **⏳ Marquer comme en retard** on the first contract.
 5. Observe the second contract automatically switching to `ANNULÉ`.
+
+---
+
+*Projet réalisé par Yuzhe Zhu & Islem Sadki*
