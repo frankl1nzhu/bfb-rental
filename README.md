@@ -1,6 +1,6 @@
 # 🚗 BFB Rental Management System
 
-A robust Car Rental Management System built withSpring Boot, designed to handle complex business rules, conflict detection, and automated state management.
+A robust Car Rental Management System built with Spring Boot, designed to handle complex business rules, conflict detection, and automated state management.
 
 ## 🛠 Tech Stack
 
